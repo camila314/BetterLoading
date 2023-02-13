@@ -589,12 +589,22 @@ public:
     }
 };
 
+GameObject* unitObject = nullptr;
+
 class $modify(PlayLayer) {
     void createObjectsFromSetup(gd::string str) {
+        // put it outside of the loop
+        if (unitObject == nullptr) {
+            unitObject = new GameObject;
+            unitObject->initWithSpriteFrameName("block001_01_001.png");
+            unitObject->retain();
+        }
+        //314
+
         std::string real = str;
         if (real.size() > 1) {
             std::string_view view = real;
-            ssize_t pos = -1;
+            intptr_t pos = -1;
             m_levelSettings = nullptr;
             std::vector<GameObject*> coins;
 
@@ -663,7 +673,7 @@ class $modify(PlayLayer) {
 // this is absolutely wild
 class $modify(MyGameObject, GameObject) {
  public:
-    void deepInitialize() {
+    void deepInitialize(char const* frameName) {
         m_pActionManager->retain();
         m_pScheduler->retain();
         m_eScriptType = kScriptTypeNone;
@@ -681,18 +691,20 @@ class $modify(MyGameObject, GameObject) {
         buf->b = this;
 
         m_pComponentContainer = reinterpret_cast<CCComponentContainer*>(buf);
+
+        auto frame = CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(frameName);
+        auto rect = frame->getRect();
+        setTexture(frame->getTexture());
+        setTextureRect(rect, false, rect.size);
+
+        m_textureName = frameName;
     }
 
     static GameObject* createWithFrame(char const* frame) {
-        static GameObject* staticObject = new GameObject;
-
         MyGameObject* object = static_cast<MyGameObject*>(malloc(sizeof(GameObject)));
-        memcpy(object, staticObject, sizeof(GameObject));
+        memcpy(object, unitObject, sizeof(GameObject));
 
-        object->deepInitialize();
-
-        object->initWithSpriteFrameName(frame);
-        object->m_textureName = frame;
+        object->deepInitialize(frame);
         object->commonSetup();
         object->autorelease();
 

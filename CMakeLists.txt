@@ -29,5 +29,6 @@ endif()
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 target_link_libraries(${PROJECT_NAME} geode-sdk)
+#target_compile_options(${PROJECT_NAME} PRIVATE -Ofast)
 
 create_geode_file(${PROJECT_NAME})

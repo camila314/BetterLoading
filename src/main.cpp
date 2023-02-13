@@ -591,14 +591,31 @@ public:
 
 GameObject* unitObject = nullptr;
 
+std::unordered_map<std::string, CCSpriteFrame*> quickFrameCache;
+class FakeSpriteCache : public CCSpriteFrameCache {
+ public:
+    void moveToQuickCache() {
+        quickFrameCache.clear();
+        auto keys = m_pSpriteFrames->allKeys();
+
+        for (int i = 0; i < keys->count(); ++i) {
+            auto key = ((CCString*)keys->objectAtIndex(i))->getCString();
+
+            quickFrameCache[key] = (CCSpriteFrame*)m_pSpriteFrames->objectForKey(key);
+        }
+    }
+};
+
 class $modify(PlayLayer) {
     void createObjectsFromSetup(gd::string str) {
-        // put it outside of the loop
+        // setup
         if (unitObject == nullptr) {
             unitObject = new GameObject;
             unitObject->initWithSpriteFrameName("block001_01_001.png");
             unitObject->retain();
         }
+        static_cast<FakeSpriteCache*>(CCSpriteFrameCache::sharedSpriteFrameCache())->moveToQuickCache();
+
         //314
 
         std::string real = str;
@@ -673,7 +690,7 @@ class $modify(PlayLayer) {
 // this is absolutely wild
 class $modify(MyGameObject, GameObject) {
  public:
-    void deepInitialize(char const* frameName) {
+    void deepInitialize(std::string frameName) {
         m_pActionManager->retain();
         m_pScheduler->retain();
         m_eScriptType = kScriptTypeNone;
@@ -692,17 +709,18 @@ class $modify(MyGameObject, GameObject) {
 
         m_pComponentContainer = reinterpret_cast<CCComponentContainer*>(buf);
 
-        auto frame = CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(frameName);
+        auto frame = quickFrameCache[frameName];//CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(frameName);
         auto rect = frame->getRect();
         setTexture(frame->getTexture());
         setTextureRect(rect, false, rect.size);
+        setDisplayFrame(frame);
 
-        m_textureName = frameName;
+        m_textureName = std::move(frameName);
     }
 
     static GameObject* createWithFrame(char const* frame) {
         MyGameObject* object = static_cast<MyGameObject*>(malloc(sizeof(GameObject)));
-        memcpy(object, unitObject, sizeof(GameObject));
+        __builtin_memcpy_inline(object, unitObject, sizeof(GameObject));
 
         object->deepInitialize(frame);
         object->commonSetup();

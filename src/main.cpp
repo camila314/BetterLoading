@@ -1,9 +1,10 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PlayLayer.hpp>
-#include <Geode/modify/GameObject.hpp>
 #include <algorithm>
 #include <chrono>
 #include "fast_double.h"
+
+#include "cache.h"
 
 USE_GEODE_NAMESPACE();
 
@@ -129,10 +130,10 @@ public:
             bool startpos = false;
             int opcode = 0;
             if (view[0] == 'k') {
-                opcode = atoi(view.substr(2, pos).data());
+                opcode = assumption_atoi(view.substr(2, pos).data());
                 startpos = true;
             } else {
-                opcode = atoi(view.substr(0, pos).data());
+                opcode = assumption_atoi(view.substr(0, pos).data());
                 startpos = false;
             }
 
@@ -430,8 +431,6 @@ public:
 
         // both of these are guesswork. but they probably work so
         if (getValue<bool>(41)) {
-            //char a[offsetof(GJSpriteColor, m_hsv)];
-            //a = 10;
             object->m_baseColor->m_hsv = hsvFromString(getValue(43));
             object->m_baseColor->m_usesHSV = true;
         }
@@ -589,23 +588,6 @@ public:
     }
 };
 
-GameObject* unitObject = nullptr;
-
-std::unordered_map<std::string, CCSpriteFrame*> quickFrameCache;
-class FakeSpriteCache : public CCSpriteFrameCache {
- public:
-    void moveToQuickCache() {
-        quickFrameCache.clear();
-        auto keys = m_pSpriteFrames->allKeys();
-
-        for (int i = 0; i < keys->count(); ++i) {
-            auto key = ((CCString*)keys->objectAtIndex(i))->getCString();
-
-            quickFrameCache[key] = (CCSpriteFrame*)m_pSpriteFrames->objectForKey(key);
-        }
-    }
-};
-
 class $modify(PlayLayer) {
     void createObjectsFromSetup(gd::string str) {
         // setup
@@ -684,48 +666,5 @@ class $modify(PlayLayer) {
         std::sort(ptr, ptr + m_speedObjects->count(), [](SpeedObject* a, SpeedObject* b) {
             return a->m_somethingToCompare < b->m_somethingToCompare;
         });
-    }
-};
-
-// this is absolutely wild
-class $modify(MyGameObject, GameObject) {
- public:
-    void deepInitialize(std::string frameName) {
-        m_pActionManager->retain();
-        m_pScheduler->retain();
-        m_eScriptType = kScriptTypeNone;
-        
-        struct ComponentContainer {
-            void* vtable;
-            CCDictionary* a;
-            CCNode* b;
-        };
-
-        auto buf = new ComponentContainer;
-        
-        buf->vtable = *reinterpret_cast<void**>(m_pComponentContainer);
-        buf->a = nullptr;
-        buf->b = this;
-
-        m_pComponentContainer = reinterpret_cast<CCComponentContainer*>(buf);
-
-        auto frame = quickFrameCache[frameName];//CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(frameName);
-        auto rect = frame->getRect();
-        setTexture(frame->getTexture());
-        setTextureRect(rect, false, rect.size);
-        setDisplayFrame(frame);
-
-        m_textureName = std::move(frameName);
-    }
-
-    static GameObject* createWithFrame(char const* frame) {
-        MyGameObject* object = static_cast<MyGameObject*>(malloc(sizeof(GameObject)));
-        __builtin_memcpy_inline(object, unitObject, sizeof(GameObject));
-
-        object->deepInitialize(frame);
-        object->commonSetup();
-        object->autorelease();
-
-        return object;
     }
 };

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - "main"
+      - "master"
 
 env:
   GEODE_SDK: ${{ github.workspace }}/sdk
@@ -104,7 +104,7 @@ jobs:
       
       - name: Merge
         shell: bash
-        run: ./merge.sh
+        run: ./.github/workflows/merge.sh
 
       - uses: actions/upload-artifact@v3
         with:

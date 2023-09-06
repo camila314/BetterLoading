@@ -458,9 +458,8 @@ public:
                 object->m_secretCoinID = getValue<int>(12);
                 break;
             case 31:
-                auto settings = LevelSettingsObject::objectFromDict(startPosString());
-                settings->retain();
-                reinterpret_cast<StartPosObject*>(object)->m_levelSettings = settings;
+                reinterpret_cast<StartPosObject*>(object)->m_levelSettings = LevelSettingsObject::objectFromDict(startPosString());
+                reinterpret_cast<StartPosObject*>(object)->m_levelSettings->retain();
                 break;
             case 200:
             case 201:

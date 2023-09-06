@@ -1,7 +1,7 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/GameObject.hpp>
 
-USE_GEODE_NAMESPACE();
+using namespace geode::prelude;
 
 GameObject* unitObject = nullptr;
 std::unordered_map<std::string, CCSpriteFrame*> quickFrameCache;

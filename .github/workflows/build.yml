@@ -41,7 +41,7 @@ jobs:
       with:
         submodules: recursive
         repository: geode-sdk/geode
-        ref: v1.0.0-beta
+        ref: v1.2.0
         path: ${{ env.GEODE_SDK }}
      
     - uses: ilammy/msvc-dev-cmd@v1
@@ -54,7 +54,7 @@ jobs:
         mkdir bin
         mkdir bin/nightly
         cd bin/nightly
-        curl -L https://github.com/geode-sdk/geode/releases/download/v1.0.0-beta/geode-v1.0.0-beta-${{ matrix.config.platform_suffix }}.zip -o geode-sdk.zip
+        curl -L https://github.com/geode-sdk/geode/releases/download/v1.2.0/geode-v1.2.0-${{ matrix.config.platform_suffix }}.zip -o geode-sdk.zip
         tar -xf geode-sdk.zip
 
     - name: Configure CMake
@@ -86,7 +86,7 @@ jobs:
       
       - name: Download and Unzip CLI
         run: |
-          curl -L https://github.com/geode-sdk/cli/releases/download/v1.3.0/geode-cli-v1.3.0-win.zip -o geode-cli.zip
+          curl -L https://github.com/geode-sdk/cli/releases/download/v2.2.4/geode-cli-v2.2.4-win.zip -o geode-cli.zip
           tar -xf geode-cli.zip
 
       - uses: actions/download-artifact@v3

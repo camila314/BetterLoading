@@ -6,7 +6,7 @@
 
 #include "cache.h"
 
-USE_GEODE_NAMESPACE();
+using namespace geode::prelude;
 
 int assumption_atoi(const char* p) {
     int x = 0;

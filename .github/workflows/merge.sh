@@ -6,5 +6,5 @@ fi
 if [ -f "built/lib$mod_name.dylib" ]; then
 	args="$args --binary built/lib$mod_name.dylib"
 fi
-echo ./geode.exe package new $mod_name $args --output $mod_name.geode
-./geode.exe package new $mod_name $args --output $mod_name.geode
+echo ./geode.exe package new . $args --output $mod_name.geode
+./geode.exe package new . $args --output $mod_name.geode

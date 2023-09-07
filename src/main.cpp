@@ -1,5 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PlayLayer.hpp>
+#include <Geode/modify/MenuLayer.hpp>
 #include <algorithm>
 #include <chrono>
 #include "fast_double.h"
@@ -587,18 +588,21 @@ public:
     }
 };
 
-class $modify(PlayLayer) {
-    void createObjectsFromSetup(gd::string str) {
-        // setup
-        if (unitObject == nullptr) {
-            unitObject = new GameObject;
-            unitObject->initWithSpriteFrameName("block001_01_001.png");
-            unitObject->retain();
-        }
+class $(MenuLayer) {
+    bool init() {
+        MenuLayer::init();
+
+        unitObject = new GameObject;
+        unitObject->initWithSpriteFrameName("block001_01_001.png");
+        unitObject->retain();
         static_cast<FakeSpriteCache*>(CCSpriteFrameCache::sharedSpriteFrameCache())->moveToQuickCache();
 
-        //314
+        return true;
+    }
+};
 
+class $modify(PlayLayer) {
+    void createObjectsFromSetup(gd::string str) {
         std::string real = str;
         if (real.size() > 1) {
             std::string_view view = real;

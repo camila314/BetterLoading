@@ -82,6 +82,7 @@ class GameObjectFactory {
 protected:
     char const* m_values[109] = { 0 };
     char const* m_startPosValues[23] = { 0 };
+    char const* m_colorValues[40] = { 0 };
     std::string m_owned;
     bool m_ldm;
 public:
@@ -128,14 +129,18 @@ public:
 
             const_cast<char*>(view.data())[pos] = 0; // lmao
 
-            bool startpos = false;
-            int opcode = 0;
+            char const** dict;
+            int opcode;
+
             if (view[0] == 'k') {
                 opcode = assumption_atoi(view.substr(2, pos).data());
-                startpos = true;
+                if (view[1] == 'A')
+                    dict = m_startPosValues;
+                else
+                    dict = m_colorValues;
             } else {
                 opcode = assumption_atoi(view.substr(0, pos).data());
-                startpos = false;
+                dict = m_values;
             }
 
             view = view.substr(pos + 1);
@@ -145,21 +150,24 @@ public:
 
             char const* operand = view.substr(0, pos).data();
 
-            if (startpos)
-                m_startPosValues[opcode] = operand;
-            else
-                m_values[opcode] = operand;
+            dict[opcode] = operand;
         } while (pos != view.size());
     }
 
-    CCDictionary* startPosString() {
+    CCDictionary* startPosString(bool withColor) {
         auto ret = CCDictionary::create();
 
         for (int i = 0; i < 23; ++i) {
             auto v = m_startPosValues[i];
-
             if (v) {
                 ret->setObject(CCString::create(v), std::string("kA") + std::to_string(i));
+            }
+        }
+
+        for (int i = 0; i < 40; ++i) {
+            auto v = m_colorValues[i];
+            if (v) {
+                ret->setObject(CCString::create(v), std::string("kS") + std::to_string(i));
             }
         }
 
@@ -459,7 +467,7 @@ public:
                 object->m_secretCoinID = getValue<int>(12);
                 break;
             case 31:
-                reinterpret_cast<StartPosObject*>(object)->m_levelSettings = LevelSettingsObject::objectFromDict(startPosString());
+                reinterpret_cast<StartPosObject*>(object)->m_levelSettings = LevelSettingsObject::objectFromDict(startPosString(false));
                 reinterpret_cast<StartPosObject*>(object)->m_levelSettings->retain();
                 break;
             case 200:
@@ -483,7 +491,7 @@ public:
         object->m_orbMultiActivate = getValue<bool>(99);
         object->customSetup();
 
-        if (strcmp(typeid(*object).name(), "16EffectGameObject") == 0) {
+        if (typeinfo_cast<EffectGameObject*>(object)) {
             setupEffectGameObject(reinterpret_cast<EffectGameObject*>(object));
         }
 

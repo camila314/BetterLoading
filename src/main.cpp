@@ -82,8 +82,7 @@ class GameObjectFactory {
 protected:
     char const* m_values[109] = { 0 };
     char const* m_startPosValues[23] = { 0 };
-    char const* m_colorValues[40] = { 0 };
-    std::string m_owned;
+    std::unique_ptr<std::string> m_owned;
     bool m_ldm;
 public:
 
@@ -113,9 +112,9 @@ public:
 
     GameObjectFactory(std::string_view str, bool ldm) {
         m_ldm = ldm;
-        m_owned = str;
+        m_owned = std::make_unique<std::string>(str);
 
-        std::string_view view = m_owned;
+        std::string_view view = *m_owned;
         std::string::size_type pos = -1;
         bool should_exit = false;
 
@@ -129,18 +128,14 @@ public:
 
             const_cast<char*>(view.data())[pos] = 0; // lmao
 
-            char const** dict;
-            int opcode;
-
-            if (view[0] == 'k') {
+            bool startpos = false;
+            int opcode = 0;
+            if (view[0] == 'k' && view[1] == 'A') {
                 opcode = assumption_atoi(view.substr(2, pos).data());
-                if (view[1] == 'A')
-                    dict = m_startPosValues;
-                else
-                    dict = m_colorValues;
+                startpos = true;
             } else {
                 opcode = assumption_atoi(view.substr(0, pos).data());
-                dict = m_values;
+                startpos = false;
             }
 
             view = view.substr(pos + 1);
@@ -150,24 +145,21 @@ public:
 
             char const* operand = view.substr(0, pos).data();
 
-            dict[opcode] = operand;
+            if (startpos)
+                m_startPosValues[opcode] = operand;
+            else
+                m_values[opcode] = operand;
         } while (pos != view.size());
     }
 
-    CCDictionary* startPosString(bool withColor) {
+    CCDictionary* startPosString() {
         auto ret = CCDictionary::create();
 
         for (int i = 0; i < 23; ++i) {
             auto v = m_startPosValues[i];
+
             if (v) {
                 ret->setObject(CCString::create(v), std::string("kA") + std::to_string(i));
-            }
-        }
-
-        for (int i = 0; i < 40; ++i) {
-            auto v = m_colorValues[i];
-            if (v) {
-                ret->setObject(CCString::create(v), std::string("kS") + std::to_string(i));
             }
         }
 
@@ -467,7 +459,7 @@ public:
                 object->m_secretCoinID = getValue<int>(12);
                 break;
             case 31:
-                reinterpret_cast<StartPosObject*>(object)->m_levelSettings = LevelSettingsObject::objectFromDict(startPosString(false));
+                reinterpret_cast<StartPosObject*>(object)->m_levelSettings = LevelSettingsObject::objectFromDict(startPosString());
                 reinterpret_cast<StartPosObject*>(object)->m_levelSettings->retain();
                 break;
             case 200:
@@ -610,6 +602,7 @@ class $(MenuLayer) {
 };
 
 class $modify(PlayLayer) {
+public:
     void createObjectsFromSetup(gd::string str) {
         std::string real = str;
         if (real.size() > 1) {
@@ -617,6 +610,8 @@ class $modify(PlayLayer) {
             intptr_t pos = -1;
             m_levelSettings = nullptr;
             std::vector<GameObject*> coins;
+
+            std::vector<GameObjectFactory> factories;
 
             while (pos != view.size()) {
                 view = view.substr(pos + 1);
@@ -634,7 +629,14 @@ class $modify(PlayLayer) {
                     continue;
                 }
                 
-                auto object = GameObjectFactory(object_string, m_level->m_lowDetailModeToggled).generate();
+                factories.push_back(std::move(GameObjectFactory(object_string, m_level->m_lowDetailModeToggled)));
+            }
+
+            allocPool.drain();
+            allocPool.alloc(factories.size());
+
+            for (auto& factory : factories) {
+                GameObject* object = factory.generate();
 
                 if (!object || (m_level->m_levelType != GJLevelType::Local && object->m_objectType == GameObjectType::SecretCoin))
                     continue;

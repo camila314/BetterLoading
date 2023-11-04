@@ -550,6 +550,7 @@ public:
                 object->saveActiveColors();
                 return object;
             case 1:
+                colorChannel = 0;
                 break;
             case 2:
                 colorChannel = 1006;

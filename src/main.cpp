@@ -678,7 +678,7 @@ public:
         auto ptr = reinterpret_cast<SpeedObject**>(m_speedObjects->data->arr);
 
         std::sort(ptr, ptr + m_speedObjects->count(), [](SpeedObject* a, SpeedObject* b) {
-            return a->m_somethingToCompare < b->m_somethingToCompare;
+            return a->m_xPos < b->m_xPos;
         });
     }
 };

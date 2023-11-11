@@ -85,6 +85,9 @@ class $modify(MyGameObject, GameObject) {
     }
 
     static GameObject* createWithFrame(char const* frame) {
+        if (!PlayLayer::get())
+            return GameObject::createWithFrame(frame);
+
         MyGameObject* pooledObj = static_cast<MyGameObject*>(allocPool.get());
         MyGameObject* object = pooledObj;
         if (!pooledObj)

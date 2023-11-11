@@ -29,8 +29,6 @@ static class AllocPool {
                 drain();
                 return;
             } else {
-                log::info("All have been released");
-
                 for (auto it = m_poolStart; it != m_pool; ++it) {
                     it->~GameObject();
                 }
@@ -43,7 +41,10 @@ static class AllocPool {
 
     void alloc(size_t objects) {
         m_poolStart = m_pool = (GameObject*)calloc(objects, sizeof(GameObject));
-        m_poolEnd = m_pool + objects;
+        if (m_pool == 0)
+            m_poolEnd = 0;
+        else
+            m_poolEnd = m_pool + objects;
     }
 
     GameObject* get() {

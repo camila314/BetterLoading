@@ -4,6 +4,7 @@
 using namespace geode::prelude;
 
 static GameObject* unitObject = nullptr;
+static LabelGameObject* unitLabelObject = nullptr;
 static std::unordered_map<std::string, CCSpriteFrame*> quickFrameCache;
 
 // god weeps
@@ -16,12 +17,28 @@ static class AllocPool {
         if (!m_poolStart)
             return;
 
-        for (GameObject* obj = m_poolStart; obj != m_pool; ++obj) {
-            obj->~GameObject();
-        }
+        Loader::get()->queueInMainThread([=]() {
+            bool anyLeft = false;
+            for (auto it = m_poolStart; it != m_pool; ++it) {
+                if (it->retainCount() > 1) {
+                    anyLeft = true;
+                }
+            }
 
-        free(m_poolStart);
-        m_poolStart = m_pool = m_poolEnd = nullptr;
+            if (anyLeft) {
+                drain();
+                return;
+            } else {
+                log::info("All have been released");
+
+                for (auto it = m_poolStart; it != m_pool; ++it) {
+                    it->~GameObject();
+                }
+
+                free(m_poolStart);
+                m_poolStart = m_pool = m_poolEnd = nullptr;
+            }
+        });
     }
 
     void alloc(size_t objects) {
@@ -53,43 +70,45 @@ class FakeSpriteCache : public CCSpriteFrameCache {
 };
 
 // this is absolutely wild
-class $modify(MyGameObject, GameObject) {
- public:
-    void deepInitialize(std::string frameName) {
-        m_pActionManager->retain();
-        m_pScheduler->retain();
-        m_eScriptType = kScriptTypeNone;
-        m_pobTexture = nullptr;
-        m_pShaderProgram = nullptr;
-        m_uReference = 1;
+class MyGameObject : public GameObject {
+    public:
+       void deepInitialize(std::string frameName) {
+           m_pActionManager->retain();
+           m_pScheduler->retain();
+           m_eScriptType = kScriptTypeNone;
+           m_pobTexture = nullptr;
+           m_pShaderProgram = nullptr;
+           m_uReference = 1;
 
-        
-        struct ComponentContainer {
-            void* vtable;
-            CCDictionary* a;
-            CCNode* b;
-        };
+           
+           struct ComponentContainer {
+               void* vtable;
+               CCDictionary* a;
+               CCNode* b;
+           };
 
-        auto buf = new ComponentContainer;
-        
-        buf->vtable = *reinterpret_cast<void**>(m_pComponentContainer);
-        buf->a = nullptr;
-        buf->b = this;
+           auto buf = new ComponentContainer;
+           
+           buf->vtable = *reinterpret_cast<void**>(m_pComponentContainer);
+           buf->a = nullptr;
+           buf->b = this;
 
-        m_pComponentContainer = reinterpret_cast<CCComponentContainer*>(buf);
+           m_pComponentContainer = reinterpret_cast<CCComponentContainer*>(buf);
 
-        auto frame = quickFrameCache.at(frameName);
-        setDisplayFrame(frame);
+           auto frame = quickFrameCache.at(frameName);
+           setDisplayFrame(frame);
 
-        m_textureName = std::move(frameName);
-    }
+           m_textureName = std::move(frameName);
+       }
+};
 
+class $modify(GameObject) {
     static GameObject* createWithFrame(char const* frame) {
         if (!PlayLayer::get())
             return GameObject::createWithFrame(frame);
 
-        MyGameObject* pooledObj = static_cast<MyGameObject*>(allocPool.get());
-        MyGameObject* object = pooledObj;
+        auto pooledObj = reinterpret_cast<MyGameObject*>(allocPool.get());
+        auto object = pooledObj;
         if (!pooledObj)
             object = static_cast<MyGameObject*>(malloc(sizeof(GameObject)));
 
@@ -102,9 +121,7 @@ class $modify(MyGameObject, GameObject) {
         object->deepInitialize(frame);
         object->commonSetup();
 
-        if (pooledObj)
-            object->retain();
-        else
+        if (!pooledObj)
             object->autorelease();
 
         return object;

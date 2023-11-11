@@ -596,14 +596,20 @@ class $(MenuLayer) {
         unitObject = new GameObject;
         unitObject->initWithSpriteFrameName("block001_01_001.png");
         unitObject->retain();
+
         static_cast<FakeSpriteCache*>(CCSpriteFrameCache::sharedSpriteFrameCache())->moveToQuickCache();
 
         return true;
     }
 };
 
-class $modify(PlayLayer) {
+class $modify(test, PlayLayer) {
 public:
+    void onQuit() {
+        PlayLayer::onQuit();
+        allocPool.drain();
+    }
+
     void createObjectsFromSetup(gd::string str) {
         std::string real = str;
         if (real.size() > 1) {
@@ -613,6 +619,7 @@ public:
             std::vector<GameObject*> coins;
 
             std::vector<GameObjectFactory> factories;
+            int labelObjects = 0;
 
             while (pos != view.size()) {
                 view = view.substr(pos + 1);
@@ -631,6 +638,7 @@ public:
                 }
                 
                 factories.push_back(std::move(GameObjectFactory(object_string, m_level->m_lowDetailModeToggled)));
+
             }
 
             allocPool.drain();
